@@ -173,7 +173,7 @@ function stopEditing($edit, via_escape) {
                 },
             }));
         }
-        else if ($item.hasClass('head') && $item.parent('.list')) {
+        else if ($item.hasClass('head') && $item.parent('.list:not([list-id])').length > 0) {
             ws.send(JSON.stringify({
                 'command': 'ADD_LIST',
                 'data': {

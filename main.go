@@ -330,8 +330,6 @@ func editNote(data MessageEditNote) error {
 }
 
 func editBoard(data MessageEditBoard) error {
-	fmt.Println(data.Id, data.Title)
-
 	result, err := database.Exec("UPDATE `boards` SET `title` = ? WHERE `id` = ?", data.Title, data.Id)
 	if err != nil {
 		return err
@@ -355,8 +353,6 @@ func editBoard(data MessageEditBoard) error {
 }
 
 func editList(data MessageEditList) error {
-	fmt.Println(data.Id, data.Title)
-
 	result, err := database.Exec("UPDATE `lists` SET `title` = ? WHERE `id` = ?", data.Title, data.Id)
 	if err != nil {
 		return err
