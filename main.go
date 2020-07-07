@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -22,22 +25,64 @@ func main() {
 
 	connections = make(map[*websocket.Conn]bool, 0)
 
-	database, err = sql.Open("sqlite3", "kanban.db?_foreign_keys=on")
+	_ = os.Mkdir("data", 0700)
+
+	err = createDatabaseFromSchemaIfNecessary()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	http.HandleFunc("/", indexPage)
+	database, err = sql.Open("sqlite3", "data/kanban.db?_foreign_keys=on")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	username := os.Getenv("USERNAME")
+	password := os.Getenv("PASSWORD")
 
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	http.HandleFunc("/live", live)
+	http.HandleFunc("/", BasicAuth(indexPage, username, password, "Authentication required"))
+	http.HandleFunc("/live", BasicAuth(live, username, password, "Authentication required"))
 
 	err = http.ListenAndServe(":80", nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
+}
+
+func createDatabaseFromSchemaIfNecessary() error {
+	_, err := os.Stat(filepath.Join("data", "kanban.db"))
+
+	if os.IsNotExist(err) {
+		schemaFile, err := os.Open("schema.sql")
+		if err != nil {
+			return err
+		}
+
+		schema, err := ioutil.ReadAll(schemaFile)
+		if err != nil {
+			return err
+		}
+
+		database, err = sql.Open("sqlite3", "data/kanban.db")
+		if err != nil {
+			return err
+		}
+
+		_, err = database.Exec(string(schema))
+		if err != nil {
+			return err
+		}
+
+		err = database.Close()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func live(w http.ResponseWriter, r *http.Request) {
@@ -683,5 +728,22 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 	_, err = w.Write(content)
 	if err != nil {
 		http.Error(w, "Internal error while sending homepage", 500)
+	}
+}
+
+func BasicAuth(handler http.HandlerFunc, username, password, realm string) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		user, pass, ok := r.BasicAuth()
+
+		if !ok || subtle.ConstantTimeCompare([]byte(user), []byte(username)) != 1 || subtle.ConstantTimeCompare([]byte(pass), []byte(password)) != 1 {
+			w.Header().Set("WWW-Authenticate", `Basic realm="`+realm+`"`)
+			w.WriteHeader(401)
+			w.Write([]byte("Unauthorised.\n"))
+			return
+		}
+
+		handler(w, r)
 	}
 }
