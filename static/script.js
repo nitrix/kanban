@@ -1155,7 +1155,7 @@ ws.onmessage = function(evt) {
     }
 
     if (obj.command === "ADD_BOARD") {
-        const $board = $('.board:not([board-id])');
+        const $board = $('.board:not([board-id])').first();
         if ($board.length === 1) {
             $board.attr('board-id', obj.data.id);
         }
