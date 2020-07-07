@@ -89,6 +89,20 @@ func processMessage(connection *websocket.Conn, data []byte) error {
 	switch message.Command {
 	case CommandGetBoards:
 		return sendBoards(connection)
+	case CommandAddNote:
+		tmp := struct { Data MessageAddNote }{}
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		return addNote(tmp.Data)
+	case CommandDeleteNote:
+		tmp := struct { Data MessageDeleteNote }{}
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		return deleteNote(tmp.Data)
 	case CommandEditNote:
 		tmp := struct { Data MessageEditNote }{}
 		err := json.Unmarshal(data, &tmp)
@@ -116,6 +130,59 @@ func processMessage(connection *websocket.Conn, data []byte) error {
 			Data: "Command not supported",
 		})
 	}
+}
+
+func addNote(data MessageAddNote) error {
+	result, err := database.Exec("INSERT INTO `notes` (`text`, `list_id`) VALUES(?, ?)", data.Text, data.ListId)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected != 1 {
+		return errors.New("unable to create new note")
+	}
+
+	lastInsertId, err := result.LastInsertId()
+	if err != nil {
+		return errors.New("unable to get last inserted note")
+	}
+
+	data.Id = int(lastInsertId)
+
+	broadcastMessage(Message{
+		Command: "ADD_NOTE",
+		Data: data,
+	})
+
+	return nil
+}
+
+func deleteNote(data MessageDeleteNote) error {
+	result, err := database.Exec("DELETE FROM `notes` WHERE `id` = ?", data.Id)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected != 1 {
+		return errors.New("unable to delete note")
+	}
+
+	broadcastMessage(Message{
+		Command: "DELETE_NOTE",
+		Data: data,
+	})
+
+	return nil
 }
 
 func editNote(data MessageEditNote) error {

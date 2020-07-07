@@ -154,6 +154,14 @@ function stopEditing($edit, via_escape) {
                     text: text_now,
                 },
             }));
+        } else if ($item.parents('.notes').length > 0) {
+            ws.send(JSON.stringify({
+                'command': 'ADD_NOTE',
+                'data': {
+                    list_id: parseInt($item.closest('.list').attr('list-id')),
+                    text: text_now,
+                },
+            }));
         }
 
         if ($item.parent('.list').attr('list-id')) {
@@ -553,15 +561,15 @@ function Drag() {
         const note_id = $(this.item).closest('.note').attr('note-id');
         const list_id = $(this.item).closest('.list').attr('list-id');
 
-        console.log(note_id, list_id);
-
-        ws.send(JSON.stringify({
-            command: 'EDIT_NOTE',
-            data: {
-                id: parseInt(note_id),
-                list_id: parseInt(list_id),
-            },
-        }))
+        if (note_id) {
+            ws.send(JSON.stringify({
+                command: 'EDIT_NOTE',
+                data: {
+                    id: parseInt(note_id),
+                    list_id: parseInt(list_id),
+                },
+            }));
+        }
 
         this.item = null;
     }
@@ -764,7 +772,17 @@ $('.board .add-note').live('click', function () {
 });
 
 $('.board .del-note').live('click', function () {
-    deleteNote($(this).closest('.note'));
+    const $note = $(this).closest('.note');
+
+    ws.send(JSON.stringify({
+        command: 'DELETE_NOTE',
+        data: {
+            id: parseInt($note.attr('note-id')),
+        },
+    }))
+
+    deleteNote($note);
+
     return false;
 });
 
@@ -984,6 +1002,34 @@ ws.onmessage = function(evt) {
         if (typeof obj.data.list_id !== "undefined") {
             $note.appendTo($('[list-id=' + obj.data.list_id + '] > .notes'));
         }
+    }
+
+    if (obj.command === 'ADD_NOTE') {
+        const $list = $('[list-id=' + obj.data.list_id + ']');
+        let $note = $list.find('.note:not([note-id])');
+
+        // Handle remotely create note.
+        if ($note.length === 0) {
+            $note = $('tt .note').clone();
+            $list.find('.notes').append($note);
+
+            const $last = $list.find('.note').last();
+
+            setText($last.find('.text'), obj.data.text);
+        }
+        else if ($note.length === 1) {
+            $note.attr('note-id', obj.data.id);
+        }
+        else if ($note.length > 1) {
+            location.reload();
+        }
+
+        $note.attr('note-id', obj.data.id);
+    }
+
+    if (obj.command === 'DELETE_NOTE') {
+        const $note = $('[note-id=' + obj.data.id + ']');
+        deleteNote($note);
     }
 
     if (obj.command === "EDIT_LIST") {
