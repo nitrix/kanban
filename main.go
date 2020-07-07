@@ -89,6 +89,13 @@ func processMessage(connection *websocket.Conn, data []byte) error {
 	switch message.Command {
 	case CommandGetBoardList:
 		return sendBoardList()
+	case CommandMoveList:
+		tmp := struct { Data MessageMoveList }{}
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		return moveList(connection, tmp.Data)
 	case CommandGetBoard:
 		tmp := struct { Data MessageGetBoard }{}
 		err := json.Unmarshal(data, &tmp)
@@ -185,7 +192,7 @@ func deleteBoard(data MessageDeleteBoard) error {
 	broadcastMessage(Message{
 		Command: CommandDeleteBoard,
 		Data: data,
-	})
+	}, nil)
 
 	return sendBoardList()
 }
@@ -215,7 +222,7 @@ func addBoard(data MessageAddBoard) error {
 	broadcastMessage(Message{
 		Command: CommandAddBoard,
 		Data: data,
-	})
+	}, nil)
 
 	return sendBoardList()
 }
@@ -245,7 +252,7 @@ func addNote(data MessageAddNote) error {
 	broadcastMessage(Message{
 		Command: CommandAddNote,
 		Data: data,
-	})
+	}, nil)
 
 	return nil
 }
@@ -275,7 +282,7 @@ func addList(data MessageAddList) error {
 	broadcastMessage(Message{
 		Command: CommandAddList,
 		Data: data,
-	})
+	}, nil)
 
 	return nil
 }
@@ -298,7 +305,7 @@ func deleteList(data MessageDeleteList) error {
 	broadcastMessage(Message{
 		Command: CommandDeleteList,
 		Data: data,
-	})
+	}, nil)
 
 	return nil
 }
@@ -321,7 +328,46 @@ func deleteNote(data MessageDeleteNote) error {
 	broadcastMessage(Message{
 		Command: CommandDeleteNote,
 		Data: data,
-	})
+	}, nil)
+
+	return nil
+}
+
+func moveList(connection *websocket.Conn, data MessageMoveList) error {
+	lists, err := getBoardLists(data.BoardId)
+	if err != nil {
+		return err
+	}
+
+	newListIds := make([]int, 0)
+	for _, list := range lists {
+		newListIds = append(newListIds, list.ID)
+	}
+
+	for k, id := range newListIds {
+		if id == data.Id && data.Direction == "LEFT" && k > 0 {
+			newListIds[k-1], newListIds[k] = newListIds[k], newListIds[k-1]
+			break
+		}
+
+		if id == data.Id && data.Direction == "RIGHT" && k < len(newListIds) {
+			newListIds[k], newListIds[k+1] = newListIds[k+1], newListIds[k]
+			break
+		}
+	}
+
+	for k, listId := range newListIds {
+		_, err := database.Exec("UPDATE `lists` SET `order` = ? WHERE `id` = ?", len(newListIds) - k, listId)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	broadcastMessage(Message{
+		Command: CommandMoveList,
+		Data: data,
+	}, connection)
 
 	return nil
 }
@@ -435,7 +481,7 @@ func editNote(data MessageEditNote) error {
 	broadcastMessage(Message{
 		Command: CommandEditNote,
 		Data: data,
-	})
+	}, nil)
 
 	return nil
 }
@@ -458,7 +504,7 @@ func editBoard(data MessageEditBoard) error {
 	broadcastMessage(Message{
 		Command: CommandEditBoard,
 		Data: data,
-	})
+	}, nil)
 
 	return nil
 }
@@ -481,7 +527,7 @@ func editList(data MessageEditList) error {
 	broadcastMessage(Message{
 		Command: CommandEditList,
 		Data: data,
-	})
+	}, nil)
 
 	return nil
 }
@@ -512,7 +558,7 @@ func sendBoardList() error {
 	broadcastMessage(Message{
 		Command: CommandBoardList,
 		Data: boards,
-	})
+	}, nil)
 
 	return nil
 }
@@ -557,7 +603,7 @@ func sendBoard(connection *websocket.Conn, data MessageGetBoard) error {
 func getBoardLists(boardId int) ([]List, error) {
 	lists := make([]List, 0)
 
-	rows, err := database.Query("SELECT `id`, `title` FROM lists WHERE `board_id` = ?", boardId)
+	rows, err := database.Query("SELECT `id`, `title` FROM lists WHERE `board_id` = ? ORDER BY `order` DESC", boardId)
 	if err != nil {
 		return nil, err
 	}
@@ -617,12 +663,14 @@ func sendMessage(connection *websocket.Conn, message Message) error {
 	return nil
 }
 
-func broadcastMessage(message Message) {
+func broadcastMessage(message Message, exclude *websocket.Conn) {
 	connectionsMutex.Lock()
 	defer connectionsMutex.Unlock()
 
 	for connection := range connections {
-		_ = sendMessage(connection, message)
+		if connection != exclude {
+			_ = sendMessage(connection, message)
+		}
 	}
 }
 

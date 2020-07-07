@@ -803,11 +803,29 @@ $('.board .del-list').live('click', function () {
 });
 
 $('.board .mov-list-l').live('click', function () {
+    ws.send(JSON.stringify({
+        command: "MOVE_LIST",
+        data: {
+            id: parseInt($(this).closest('.list').attr('list-id')),
+            board_id: parseInt($(this).closest('.board').attr('board-id')),
+            direction: "LEFT",
+        },
+    }))
+
     moveList($(this).closest('.list'), true);
     return false;
 });
 
 $('.board .mov-list-r').live('click', function () {
+    ws.send(JSON.stringify({
+        command: "MOVE_LIST",
+        data: {
+            id: parseInt($(this).closest('.list').attr('list-id')),
+            board_id: parseInt($(this).closest('.board').attr('board-id')),
+            direction: "RIGHT",
+        },
+    }))
+
     moveList($(this).closest('.list'), false);
     return false;
 });
@@ -1160,6 +1178,10 @@ ws.onmessage = function(evt) {
             $board.attr('board-id', obj.data.id);
         }
         localStorage.setItem('board_id', obj.data.id);
+    }
+
+    if (obj.command === "MOVE_LIST") {
+        moveList($('[list-id=' + obj.data.id + ']'), obj.data.direction === 'LEFT');
     }
 }
 

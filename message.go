@@ -15,11 +15,18 @@ const (
 	CommandDeleteList Command = "DELETE_LIST"
 	CommandAddBoard Command = "ADD_BOARD"
 	CommandDeleteBoard Command = "DELETE_BOARD"
+	CommandMoveList Command = "MOVE_LIST"
 )
 
 type Message struct {
 	Command Command `json:"command"`
 	Data interface{} `json:"data"`
+}
+
+type MessageMoveList struct {
+	Id int `json:"id"`
+	BoardId int `json:"board_id"`
+	Direction string `json:"direction"`
 }
 
 type MessageGetBoard struct {
