@@ -1002,7 +1002,7 @@ if (localStorage.getItem('nullboard.fsize') === 'z1')
 
 setInterval(adjustListScroller, 100);
 
-let ws = new WebSocket("ws://localhost/live");
+let ws = new WebSocket((document.location.protocol === 'https:' ? "wss://" : "ws://" ) + window.location.hostname + "/live");
 
 ws.onopen = function() {
     const board_id = localStorage.getItem('board_id');
