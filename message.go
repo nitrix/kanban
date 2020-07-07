@@ -16,7 +16,9 @@ type Message struct {
 
 type MessageEditNote struct {
 	Id int `json:"id"`
-	Text string `json:"text"`
+	Text string `json:"text,omitempty"`
+	Raw *bool `json:"raw,omitempty"`
+	Minimized *bool `json:"minimized,omitempty"`
 }
 
 type MessageEditList struct {

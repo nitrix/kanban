@@ -119,20 +119,55 @@ func processMessage(connection *websocket.Conn, data []byte) error {
 }
 
 func editNote(data MessageEditNote) error {
-	fmt.Println(data.Id, data.Text)
+	// Text
+	if data.Text != "" {
+		result, err := database.Exec("UPDATE `notes` SET `text` = ? WHERE `id` = ?", data.Text, data.Id)
+		if err != nil {
+			return err
+		}
 
-	result, err := database.Exec("UPDATE `notes` SET `text` = ? WHERE `id` = ?", data.Text, data.Id)
-	if err != nil {
-		return err
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+
+		if affected != 1 {
+			return errors.New("note not found")
+		}
 	}
 
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return err
+	// Minimized
+	if data.Minimized != nil {
+		result, err := database.Exec("UPDATE `notes` SET `minimized` = ? WHERE `id` = ?", *data.Minimized, data.Id)
+		if err != nil {
+			return err
+		}
+
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+
+		if affected != 1 {
+			return errors.New("note not found")
+		}
 	}
 
-	if affected != 1 {
-		return errors.New("note not found")
+	// Raw
+	if data.Raw != nil {
+		result, err := database.Exec("UPDATE `notes` SET `raw` = ? WHERE `id` = ?", *data.Raw, data.Id)
+		if err != nil {
+			return err
+		}
+
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+
+		if affected != 1 {
+			return errors.New("note not found")
+		}
 	}
 
 	broadcastMessage(Message{

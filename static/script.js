@@ -1,5 +1,3 @@
-const nb_dataVersion = 20190412;
-
 document.boards = [];
 
 window.onerror = function (message, file, line, col, e) {
@@ -11,12 +9,6 @@ window.addEventListener("error", function (e) {
     alert("Error occurred: " + e.error.message);
     return false;
 })
-
-function Note(text) {
-    this.text = text;
-    this.raw = false;
-    this.min = false;
-}
 
 function Board(title) {
     this.id = +new Date();
@@ -49,7 +41,7 @@ function getText($note) {
 
 function updatePageTitle() {
     if (!document.board) {
-        document.title = 'Nullboard';
+        document.title = 'Kanban';
         return;
     }
 
@@ -57,7 +49,7 @@ function updatePageTitle() {
     const title = getText($text);
 
     document.board.title = title;
-    document.title = 'NB - ' + (title || '(unnamed board)');
+    document.title = 'Kanban - ' + (title || '(unnamed board)');
 }
 
 function showBoard(quick) {
@@ -764,12 +756,34 @@ $('.board .del-note').live('click', function () {
 });
 
 $('.board .raw-note').live('click', function () {
-    $(this).closest('.note').toggleClass('raw');
+    const $note = $(this).closest('.note');
+
+    $note.toggleClass('raw');
+
+    ws.send(JSON.stringify({
+        command: 'EDIT_NOTE',
+        data: {
+            id: parseInt($note.attr('note-id')),
+            raw: $note.hasClass('raw'),
+        },
+    }))
+
     return false;
 });
 
 $('.board .collapse').live('click', function () {
-    $(this).closest('.note').toggleClass('collapsed');
+    const $note = $(this).closest('.note');
+
+    $note.toggleClass('collapsed');
+
+    ws.send(JSON.stringify({
+        command: 'EDIT_NOTE',
+        data: {
+            id: parseInt($note.attr('note-id')),
+            minimized: $note.hasClass('collapsed'),
+        },
+    }))
+
     return false;
 });
 
@@ -903,7 +917,6 @@ ws.onopen = function() {
 
 ws.onclose = function() {
     ws = null;
-    alert('Lost connection');
     location.reload();
 }
 
@@ -931,8 +944,29 @@ ws.onmessage = function(evt) {
     }
 
     if (obj.command === "EDIT_NOTE") {
-        const $text = $('[note-id=' + obj.data.id + ']').find('.text');
-        setText($text, obj.data.text);
+        const $note = $('[note-id=' + obj.data.id + ']');
+
+        if (typeof obj.data.text !== "undefined") {
+            console.log('Setting text of ' + obj.data.id + ' to ' + obj.data.text);
+            const $text = $note.find('.text');
+            setText($text, obj.data.text);
+        }
+
+        if (typeof obj.data.raw !== "undefined") {
+            if (obj.data.raw) {
+                $note.addClass('raw');
+            } else {
+                $note.removeClass('raw');
+            }
+        }
+
+        if (typeof obj.data.minimized !== "undefined") {
+            if (obj.data.minimized) {
+                $note.addClass('collapsed');
+            } else {
+                $note.removeClass('collapsed');
+            }
+        }
     }
 
     if (obj.command === "EDIT_LIST") {
@@ -950,6 +984,5 @@ ws.onmessage = function(evt) {
 
 ws.onerror = function(evt) {
     ws = null;
-    alert("Communication error: " + evt.data);
     location.reload();
 }
