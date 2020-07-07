@@ -93,7 +93,7 @@ func processMessage(connection *websocket.Conn, message Message) error {
 }
 
 func sendBoards(connection *websocket.Conn) error {
-	rows, err := database.Query("SELECT `id`, `title`, `blob` FROM boards")
+	rows, err := database.Query("SELECT `id`, `title` FROM boards")
 	if err != nil {
 		return err
 	}
@@ -101,24 +101,13 @@ func sendBoards(connection *websocket.Conn) error {
 	boards := make([]Board, 0)
 	for rows.Next() {
 		board := Board{}
-		blob := ""
 
-		err := rows.Scan(&board.ID, &board.Title, &blob)
+		err := rows.Scan(&board.ID, &board.Title)
 		if err != nil {
 			return err
 		}
 
 		board.Lists, err = getBoardLists(board.ID)
-
-		/*
-		lists := make([]List, 0)
-		err = json.Unmarshal([]byte(blob), &lists)
-		if err != nil {
-			return err
-		}
-
-		board.Lists = lists
-		*/
 
 		boards = append(boards, board)
 	}
