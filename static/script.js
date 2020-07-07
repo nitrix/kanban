@@ -102,40 +102,6 @@ function showBoard(quick) {
     setupListScrolling();
 }
 
-function parseBoard(blob) {
-    let board;
-
-    try {
-        board = JSON.parse(blob);
-    } catch (x) {
-        console.log('Malformed JSON');
-        return false;
-    }
-
-    return $.extend(new Board, board);
-}
-
-function loadBoard(board_id) {
-    const blob = document.boards[board_id].blob;
-    if (!blob)
-        return false;
-
-    const board = parseBoard(blob);
-    if (!board) {
-        alert('Whoops. Error parsing board data.');
-        console.log('Whoops, there it is:', blob);
-        return false;
-    }
-
-    if (board.id !== parseInt(board_id)) {
-        alert('Whoops. Malformed board.');
-        console.log('Whoops, there it is:', board.id, board_id);
-        return false;
-    }
-
-    return board;
-}
-
 function nukeBoard() {
     const prefix = new RegExp('^nullboard\.board\.' + document.board.id);
 
@@ -736,12 +702,8 @@ $('.config .add-board').live('click', function () {
 });
 
 $('.config .load-board').live('click', function () {
-    const board_id = $(this)[0].board_id;
-
-    if ((document.board && document.board.id) === board_id)
-        closeBoard();
-    else
-        openBoard($(this)[0].board_id);
+    closeBoard();
+    openBoard($(this)[0].board_id);
 
     return false;
 });
@@ -937,22 +899,13 @@ ws.onmessage = function(evt) {
 
     if (obj.command === "Boards") {
         for (let i = 0; i < obj.data.length; i++) {
-            const blob = obj.data[i].blob;
-            if (!blob)
-                return false;
-
-            const board = parseBoard(blob);
-            if (!board) {
-                alert('Whoops. Error parsing board data.');
-                return false;
-            }
-
-            document.boards[obj.data[i].id] = board;
+            const board = obj.data[i];
+            document.boards[board.id] = board;
         }
 
         updateBoardMenu();
 
-        if (board_id) {
+        if (typeof document.boards[board_id] !== "undefined") {
             document.board = document.boards[board_id];
             showBoard(true);
         }

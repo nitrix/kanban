@@ -1,7 +1,7 @@
 package main
 
-type Board struct {
+type List struct {
 	ID int `json:"id"`
 	Title string `json:"title"`
-	Lists []List `json:"lists"`
+	Notes []Note `json:"notes"`
 }

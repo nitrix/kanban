@@ -93,7 +93,7 @@ func processMessage(connection *websocket.Conn, message Message) error {
 }
 
 func sendBoards(connection *websocket.Conn) error {
-	rows, err := database.Query("SELECT `id`, `blob` FROM boards")
+	rows, err := database.Query("SELECT `id`, `title`, `blob` FROM boards")
 	if err != nil {
 		return err
 	}
@@ -101,11 +101,24 @@ func sendBoards(connection *websocket.Conn) error {
 	boards := make([]Board, 0)
 	for rows.Next() {
 		board := Board{}
+		blob := ""
 
-		err := rows.Scan(&board.ID, &board.Blob)
+		err := rows.Scan(&board.ID, &board.Title, &blob)
 		if err != nil {
 			return err
 		}
+
+		board.Lists, err = getBoardLists(board.ID)
+
+		/*
+		lists := make([]List, 0)
+		err = json.Unmarshal([]byte(blob), &lists)
+		if err != nil {
+			return err
+		}
+
+		board.Lists = lists
+		*/
 
 		boards = append(boards, board)
 	}
@@ -119,6 +132,55 @@ func sendBoards(connection *websocket.Conn) error {
 		Command: "Boards",
 		Data: boards,
 	})
+}
+
+func getBoardLists(boardId int) ([]List, error) {
+	lists := make([]List, 0)
+
+	rows, err := database.Query("SELECT `id`, `title` FROM lists WHERE `board_id` = ?", boardId)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		list := List{}
+
+		err = rows.Scan(&list.ID, &list.Title)
+		if err != nil {
+			return nil, err
+		}
+
+		list.Notes, err = getNotesInList(list.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		lists = append(lists, list)
+	}
+
+	return lists, nil
+}
+
+func getNotesInList(listId int) ([]Note, error) {
+	notes := make([]Note, 0)
+
+	rows, err := database.Query("SELECT `id`, `minimized`, `raw`, `text` FROM notes WHERE `list_id` = ?", listId)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		note := Note{}
+
+		err = rows.Scan(&note.ID, &note.Minimized, &note.Raw, &note.Text)
+		if err != nil {
+			return nil, err
+		}
+
+		notes = append(notes, note)
+	}
+
+	return notes, nil
 }
 
 func sendMessage(connection *websocket.Conn, message Message) error {
