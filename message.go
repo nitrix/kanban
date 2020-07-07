@@ -9,11 +9,23 @@ const (
 	CommandEditNote Command = "EDIT_NOTE"
 	CommandEditList Command = "EDIT_LIST"
 	CommandEditBoard Command = "EDIT_BOARD"
+	CommandAddList Command = "ADD_LIST"
+	CommandDeleteList Command = "DELETE_LIST"
 )
 
 type Message struct {
 	Command Command `json:"command"`
 	Data interface{} `json:"data"`
+}
+
+type MessageAddList struct {
+	Id int `json:"id,omitempty"`
+	Title string `json:"title"`
+	BoardId int `json:"board_id"`
+}
+
+type MessageDeleteList struct {
+	Id int `json:"id"`
 }
 
 type MessageAddNote struct {

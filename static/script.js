@@ -173,6 +173,15 @@ function stopEditing($edit, via_escape) {
                 },
             }));
         }
+        else if ($item.hasClass('head') && $item.parent('.list')) {
+            ws.send(JSON.stringify({
+                'command': 'ADD_LIST',
+                'data': {
+                    board_id: parseInt($('.board').attr('board-id')),
+                    title: text_now,
+                },
+            }));
+        }
 
         if ($item.parent('.board').attr('board-id')) {
             ws.send(JSON.stringify({
@@ -752,7 +761,16 @@ $('.board .add-list').live('click', function () {
 });
 
 $('.board .del-list').live('click', function () {
-    deleteList($(this).closest('.list'));
+    const $list = $(this).closest('.list');
+
+    ws.send(JSON.stringify({
+        'command': 'DELETE_LIST',
+        'data': {
+            id: parseInt($list.attr('list-id')),
+        },
+    }));
+
+    deleteList($list);
     return false;
 });
 
@@ -978,7 +996,6 @@ ws.onmessage = function(evt) {
         const $note = $('[note-id=' + obj.data.id + ']');
 
         if (typeof obj.data.text !== "undefined") {
-            console.log('Setting text of ' + obj.data.id + ' to ' + obj.data.text);
             const $text = $note.find('.text');
             setText($text, obj.data.text);
         }
@@ -1042,6 +1059,44 @@ ws.onmessage = function(evt) {
         document.boards[obj.data.id].title = obj.data.title;
         setText($text, obj.data.title);
         updateBoardMenu();
+    }
+
+    if (obj.command === "DELETE_LIST") {
+        const $list = $('[list-id=' + obj.data.id + ']');
+        deleteList($list);
+    }
+
+    if (obj.command === "ADD_LIST") {
+        const $board = $('.board[board-id=' + obj.data.board_id + ']');
+        if ($board.length === 0) {
+            return;
+        }
+
+        let $list = $board.find('.lists > .list:not([list-id])');
+
+        if ($list.length === 0) {
+            const $board = $('.wrap .board');
+            const $lists = $board.find('.lists');
+            $list = $('tt .list').clone();
+            $list.attr('list-id', obj.data.id);
+
+            $list.find('.text').html('');
+            $lists.append($list);
+
+            const lists = $lists[0];
+
+            setText($list.find('.text'), obj.data.title);
+
+            lists.scrollLeft = Math.max(0, lists.scrollWidth - lists.clientWidth);
+
+            setupListScrolling();
+        }
+        else if ($list.length === 1) {
+            $list.attr('list-id', obj.data.id);
+        }
+        else {
+            location.reload();
+        }
     }
 }
 

@@ -103,6 +103,20 @@ func processMessage(connection *websocket.Conn, data []byte) error {
 			return err
 		}
 		return deleteNote(tmp.Data)
+	case CommandAddList:
+		tmp := struct { Data MessageAddList }{}
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		return addList(tmp.Data)
+	case CommandDeleteList:
+		tmp := struct { Data MessageDeleteList }{}
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		return deleteList(tmp.Data)
 	case CommandEditNote:
 		tmp := struct { Data MessageEditNote }{}
 		err := json.Unmarshal(data, &tmp)
@@ -156,6 +170,59 @@ func addNote(data MessageAddNote) error {
 
 	broadcastMessage(Message{
 		Command: "ADD_NOTE",
+		Data: data,
+	})
+
+	return nil
+}
+
+func addList(data MessageAddList) error {
+	result, err := database.Exec("INSERT INTO `lists` (`board_id`, `title`) VALUES (?, ?)", data.BoardId, data.Title)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected != 1 {
+		return errors.New("unable to add new list")
+	}
+
+	lastInsertId, err := result.LastInsertId()
+	if err != nil {
+		return errors.New("unable to get last inserted note")
+	}
+
+	data.Id = int(lastInsertId)
+
+	broadcastMessage(Message{
+		Command: CommandAddList,
+		Data: data,
+	})
+
+	return nil
+}
+
+func deleteList(data MessageDeleteList) error {
+	result, err := database.Exec("DELETE FROM `lists` WHERE `id` = ?", data.Id)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected != 1 {
+		return errors.New("unable to delete list")
+	}
+
+	broadcastMessage(Message{
+		Command: "DELETE_LIST",
 		Data: data,
 	})
 
