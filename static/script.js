@@ -582,6 +582,7 @@ function Drag() {
 
         const note_id = $(this.item).closest('.note').attr('note-id');
         const list_id = $(this.item).closest('.list').attr('list-id');
+        const previous_note_id = $(this.item).closest('.note').prev().attr('note-id') || 0;
 
         if (note_id) {
             ws.send(JSON.stringify({
@@ -589,6 +590,7 @@ function Drag() {
                 data: {
                     id: parseInt(note_id),
                     list_id: parseInt(list_id),
+                    previous_note_id: parseInt(previous_note_id),
                 },
             }));
         }
@@ -1065,6 +1067,12 @@ ws.onmessage = function(evt) {
 
         if (typeof obj.data.list_id !== "undefined") {
             $note.appendTo($('[list-id=' + obj.data.list_id + '] > .notes'));
+        }
+
+        if (typeof obj.data.previous_note_id !== "undefined" && obj.data.previous_note_id > 0) {
+            $note.insertAfter($('[note-id=' + obj.data.previous_note_id + ']'));
+        } else if (typeof obj.data.previous_note_id !== "undefined" && obj.data.previous_note_id === 0) {
+            $('[list-id=' + obj.data.list_id + ']').find('.notes').prepend($note);
         }
     }
 

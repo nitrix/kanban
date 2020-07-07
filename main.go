@@ -395,6 +395,43 @@ func editNote(data MessageEditNote) error {
 		}
 	}
 
+	if data.PreviousNoteId != nil {
+		notes, err := getNotesInList(data.ListId)
+		if err != nil {
+			return err
+		}
+
+		newNoteIds := make([]int, 0)
+
+		if *data.PreviousNoteId == 0 {
+			newNoteIds = append(newNoteIds, data.Id)
+		}
+
+		for _, note := range notes {
+			if note.ID == data.Id {
+				// Do nothing, it was already moved.
+				continue
+			}
+
+			if note.ID == *data.PreviousNoteId {
+				newNoteIds = append(newNoteIds, note.ID)
+				newNoteIds = append(newNoteIds, data.Id)
+			} else {
+				newNoteIds = append(newNoteIds, note.ID)
+			}
+		}
+
+		fmt.Println(newNoteIds)
+
+		for k, noteId := range newNoteIds {
+			_, err := database.Exec("UPDATE `notes` SET `order` = ? WHERE `id` = ?", len(newNoteIds) - k, noteId)
+
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	broadcastMessage(Message{
 		Command: CommandEditNote,
 		Data: data,
@@ -547,7 +584,7 @@ func getBoardLists(boardId int) ([]List, error) {
 func getNotesInList(listId int) ([]Note, error) {
 	notes := make([]Note, 0)
 
-	rows, err := database.Query("SELECT `id`, `minimized`, `raw`, `text` FROM notes WHERE `list_id` = ?", listId)
+	rows, err := database.Query("SELECT `id`, `minimized`, `raw`, `text`, `order` FROM notes WHERE `list_id` = ? ORDER BY `order` DESC, `id` ASC", listId)
 	if err != nil {
 		return nil, err
 	}
@@ -555,7 +592,7 @@ func getNotesInList(listId int) ([]Note, error) {
 	for rows.Next() {
 		note := Note{}
 
-		err = rows.Scan(&note.ID, &note.Minimized, &note.Raw, &note.Text)
+		err = rows.Scan(&note.ID, &note.Minimized, &note.Raw, &note.Text, &note.order)
 		if err != nil {
 			return nil, err
 		}

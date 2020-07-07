@@ -61,6 +61,7 @@ type MessageEditNote struct {
 	Text string `json:"text,omitempty"`
 	Raw *bool `json:"raw,omitempty"`
 	Minimized *bool `json:"minimized,omitempty"`
+	PreviousNoteId *int `json:"previous_note_id,omitempty"`
 }
 
 type MessageEditList struct {

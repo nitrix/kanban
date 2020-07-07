@@ -5,4 +5,5 @@ type Note struct {
 	Minimized bool `json:"min"`
 	Raw bool `json:"raw"`
 	Text string `json:"text"`
+	order int
 }
