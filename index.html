@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Kanban</title>
+	<link rel="stylesheet" href="static/style.css">
+</head>
+
+<body>
+	<div class=config>
+		<a href=# class=teaser>&equiv;</a>
+		<div class=bulk>
+			<a href=# class=add-board>Add new board...</a>
+			<div class=boards></div>
+			<a href="#" class="switch-theme">Use <i>light</i><b>dark</b> theme</a>
+			<a href="#" class="switch-fsize">Use <i>smaller</i><b>larger</b> font</a>
+		</div>
+	</div>
+
+	<div class=wrap>
+	</div>
+
+	<tt>
+		<!-- templates -->
+		<div class=board>
+			<div class=head>
+				<div class=text></div>
+				<input class=edit spellcheck=false placeholder='Name of the board'>
+				<div class=menu>
+					<a href=# class=teaser>&equiv;</a>
+					<div class=bulk>
+						<a href=# class='del-board warn'><u></u> Board</a>
+						<a href=# class='add-list'>+ List</a>
+					</div>
+				</div>
+			</div>
+			<div class=lists-scroller><div></div></div>
+			<div class=lists>
+			</div>
+		</div>
+
+		<div class=list>
+			<div class=head>
+				<div class=text></div>
+				<input class=edit spellcheck=false placeholder='Name of the list'>
+				<div class=menu>
+					<a href=# class=teaser>&equiv;</a>
+					<div class=bulk>
+						<a href=# class='del-list warn'><u></u> List</a>
+						<a href=# class='mov-list-l full'>&lt; Move</a>
+						<a href=# class='mov-list-l half'>&lt; Mo</a><a href=# class='mov-list-r half'>ve &gt;</a>
+						<a href=# class='mov-list-r full'>Move &gt;</a>
+						<a href=# class='add-note'>+ Note</a>
+					</div>
+				</div>
+			</div>
+			<div class=notes>
+			</div>
+		</div>
+
+		<div class=note>
+			<div class=ops>
+				<a href=# class=teaser></a>
+				<div class=bulk>
+					<a href=# class='del-note warn'><u></u></a>
+					<a href=# class='raw-note'>R</a>
+					<a href=# class='collapse'>_</a>
+				</div>
+			</div>
+			<div class=text>
+			</div>
+			<textarea class=edit spellcheck=false></textarea>
+		</div>
+
+		<a href=# class=load-board></a>
+
+		<textarea class=encoder></textarea>
+
+		<div class=license>
+		</div>
+	</tt>
+
+</body>
+
+<script src="static/jquery-1.8.3.min.js"></script>
+<script src="static/script.js"></script>
+
+</html>
