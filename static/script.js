@@ -61,6 +61,9 @@ function updatePageTitle() {
 function showBoard(quick) {
     const board = document.board;
 
+    // Keep track of the last seen board.
+    localStorage.setItem('board_id', board.id);
+
     const $wrap = $('.wrap');
     const $bdiv = $('tt .board');
     const $ldiv = $('tt .list');
@@ -76,10 +79,12 @@ function showBoard(quick) {
         const $l = $ldiv.clone();
         const $l_notes = $l.find('.notes');
 
+        $l.attr('list-id', list.id);
         setText($l.find('.head .text'), list.title);
 
         list.notes.forEach(function (n) {
             const $n = $ndiv.clone();
+            $n.attr('note-id', n.id);
             setText($n.find('.text'), n.text);
             if (n.raw) $n.addClass('raw');
             if (n.min) $n.addClass('collapsed');
@@ -100,23 +105,6 @@ function showBoard(quick) {
     updatePageTitle();
     updateBoardMenu();
     setupListScrolling();
-}
-
-function nukeBoard() {
-    const prefix = new RegExp('^nullboard\.board\.' + document.board.id);
-
-    for (let i = 0; i < localStorage.length;) {
-        const k = localStorage.key(i);
-
-        if (k.match(prefix)) {
-            console.log("Removed " + k);
-            localStorage.removeItem(k);
-        } else {
-            i++;
-        }
-    }
-
-    localStorage.removeItem('nullboard.last_board');
 }
 
 function startEditing($text) {
@@ -149,6 +137,21 @@ function stopEditing($edit, via_escape) {
 
     const brand_new = $item.hasClass('brand-new');
     $item.removeClass('brand-new');
+
+    if ($item.attr('note-id')) {
+        ws.send(JSON.stringify({
+            'command': 'EDIT_NOTE',
+            'data': {
+                Id: parseInt($item.attr('note-id')),
+                Text: text_now,
+            },
+        }));
+    }
+
+    if (brand_new && text_now === "") {
+        $item.closest('.note, .list, .board').remove();
+        return;
+    }
 
     if (via_escape) {
         if (brand_new) {
@@ -265,8 +268,6 @@ function openBoard(board_id) {
 
     document.board = document.boards[board_id];
 
-    localStorage.setItem('nullboard.last_board', board_id);
-
     showBoard(true);
 }
 
@@ -284,15 +285,12 @@ function closeBoard(quick) {
     }
 
     document.board = null;
-    localStorage.setItem('nullboard.last_board', null);
 
     updateBoardMenu();
 }
 
 function addBoard() {
     document.board = new Board('');
-
-    localStorage.setItem('nullboard.last_board', document.board_id);
 
     showBoard(false);
 
@@ -306,7 +304,6 @@ function deleteBoard() {
     if ($list.length && !confirm("PERMANENTLY delete this board, all its lists and their notes?"))
         return;
 
-    nukeBoard();
     closeBoard();
 }
 
@@ -549,6 +546,7 @@ function updateBoardMenu() {
 
     const id_now = document.board && document.board.id;
 
+    const board_id = localStorage.getItem('board_id');
     if (board_id === id_now)
         $e.addClass('active');
 
@@ -857,6 +855,7 @@ function setupListScrolling() {
     $scroller.on('scroll', function () {
         cloneScrollPos($scroller, $lists);
     });
+
     $lists.on('scroll', function () {
         cloneScrollPos($lists, $scroller);
     });
@@ -870,21 +869,13 @@ if (localStorage.getItem('nullboard.theme') === 'dark')
 if (localStorage.getItem('nullboard.fsize') === 'z1')
     $('body').addClass('z1');
 
-const board_id = localStorage.getItem('nullboard.last_board');
-
-if (document.board) {
-    showBoard(true);
-}
-
 setInterval(adjustListScroller, 100);
-
-setupListScrolling();
 
 let ws = new WebSocket("ws://localhost/live");
 
 ws.onopen = function() {
     ws.send(JSON.stringify({
-        command: "GetBoards"
+        command: "GET_BOARDS"
     }));
 }
 
@@ -896,8 +887,9 @@ ws.onclose = function() {
 
 ws.onmessage = function(evt) {
     const obj = JSON.parse(evt.data);
+    let board_id = localStorage.getItem('board_id');
 
-    if (obj.command === "Boards") {
+    if (obj.command === "BOARDS") {
         for (let i = 0; i < obj.data.length; i++) {
             const board = obj.data[i];
             document.boards[board.id] = board;
@@ -905,13 +897,25 @@ ws.onmessage = function(evt) {
 
         updateBoardMenu();
 
-        if (typeof document.boards[board_id] !== "undefined") {
+        if (board_id === null && document.boards.length > 0) {
+            board_id = document.boards[Object.keys(document.boards)[0]].id;
+            localStorage.setItem('board_id', board_id);
+        }
+
+        if (board_id && typeof document.boards[board_id] !== "undefined") {
             document.board = document.boards[board_id];
             showBoard(true);
         }
     }
+
+    if (obj.command === "EDIT_NOTE") {
+        const $text = $('[note-id=' + obj.data.id + ']').find('.text');;
+        setText($text, obj.data.text);
+    }
 }
 
 ws.onerror = function(evt) {
-    console.log("ERROR: " + evt.data);
+    ws = null;
+    alert("Communication error: " + evt.data);
+    location.reload();
 }

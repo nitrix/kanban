@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/gorilla/websocket"
 	_ "github.com/mattn/go-sqlite3"
 	"io/ioutil"
@@ -66,14 +68,7 @@ func live(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		message := Message{}
-		err = json.Unmarshal(data, &message)
-		if err != nil {
-			log.Println("Unable to deserialize message from websocket:", err)
-			return
-		}
-
-		err = processMessage(c, message)
+		err = processMessage(c, data)
 		if err != nil {
 			log.Println("Unable to process message:", err)
 			return
@@ -81,15 +76,57 @@ func live(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func processMessage(connection *websocket.Conn, message Message) error {
-	if message.Command == "GetBoards" {
-		return sendBoards(connection)
+func processMessage(connection *websocket.Conn, data []byte) error {
+	message := Message{}
+
+	err := json.Unmarshal(data, &message)
+	if err != nil {
+		return err
 	}
 
-	return sendMessage(connection, Message{
-		Command: "Error",
-		Data: "Command not supported",
+	fmt.Println("Received:", message)
+
+	switch message.Command {
+	case CommandGetBoards:
+		return sendBoards(connection)
+	case CommandEditNote:
+		tmp := struct { Data MessageEditNote }{}
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		return editNote(tmp.Data)
+	default:
+		return sendMessage(connection, Message{
+			Command: "Error",
+			Data: "Command not supported",
+		})
+	}
+}
+
+func editNote(data MessageEditNote) error {
+	fmt.Println(data.Id, data.Text)
+
+	result, err := database.Exec("UPDATE `notes` SET `text` = ? WHERE `id` = ?", data.Text, data.Id)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected != 1 {
+		return errors.New("note not found")
+	}
+
+	broadcastMessage(Message{
+		Command: "EDIT_NOTE",
+		Data: data,
 	})
+
+	return nil
 }
 
 func sendBoards(connection *websocket.Conn) error {
@@ -118,7 +155,7 @@ func sendBoards(connection *websocket.Conn) error {
 	}
 
 	return sendMessage(connection, Message{
-		Command: "Boards",
+		Command: CommandBoards,
 		Data: boards,
 	})
 }
