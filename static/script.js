@@ -252,9 +252,6 @@ function deleteList($list) {
         empty &= ($(this).html().length === 0);
     });
 
-    if (!empty && !confirm("Delete this list and all its notes?"))
-        return;
-
     $list
         .animate({opacity: 0})
         .queue(function () {
@@ -763,6 +760,9 @@ $('.board .add-list').live('click', function () {
 $('.board .del-list').live('click', function () {
     const $list = $(this).closest('.list');
 
+    if (!confirm("Delete this list and all its notes?"))
+        return;
+
     ws.send(JSON.stringify({
         'command': 'DELETE_LIST',
         'data': {
@@ -771,6 +771,7 @@ $('.board .del-list').live('click', function () {
     }));
 
     deleteList($list);
+
     return false;
 });
 

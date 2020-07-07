@@ -22,7 +22,7 @@ func main() {
 
 	connections = make(map[*websocket.Conn]bool, 0)
 
-	database, err = sql.Open("sqlite3", "kanban.db")
+	database, err = sql.Open("sqlite3", "kanban.db?_foreign_keys=on")
 	if err != nil {
 		log.Fatalln(err)
 	}
