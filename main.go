@@ -87,8 +87,29 @@ func processMessage(connection *websocket.Conn, data []byte) error {
 	fmt.Println("Received:", message)
 
 	switch message.Command {
-	case CommandGetBoards:
-		return sendBoards(connection)
+	case CommandGetBoardList:
+		return sendBoardList()
+	case CommandGetBoard:
+		tmp := struct { Data MessageGetBoard }{}
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		return sendBoard(connection, tmp.Data)
+	case CommandDeleteBoard:
+		tmp := struct { Data MessageDeleteBoard }{}
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		return deleteBoard(tmp.Data)
+	case CommandAddBoard:
+		tmp := struct { Data MessageAddBoard }{}
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		return addBoard(tmp.Data)
 	case CommandAddNote:
 		tmp := struct { Data MessageAddNote }{}
 		err := json.Unmarshal(data, &tmp)
@@ -146,6 +167,59 @@ func processMessage(connection *websocket.Conn, data []byte) error {
 	}
 }
 
+func deleteBoard(data MessageDeleteBoard) error {
+	result, err := database.Exec("DELETE FROM `boards` WHERE `id` = ?", data.Id)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected != 1 {
+		return errors.New("unable to create new note")
+	}
+
+	broadcastMessage(Message{
+		Command: CommandDeleteBoard,
+		Data: data,
+	})
+
+	return sendBoardList()
+}
+
+func addBoard(data MessageAddBoard) error {
+	result, err := database.Exec("INSERT INTO `boards` (`title`) VALUES(?)", data.Title)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected != 1 {
+		return errors.New("unable to create new note")
+	}
+
+	lastInsertId, err := result.LastInsertId()
+	if err != nil {
+		return errors.New("unable to get last inserted board")
+	}
+
+	data.Id = int(lastInsertId)
+
+	broadcastMessage(Message{
+		Command: CommandAddBoard,
+		Data: data,
+	})
+
+	return sendBoardList()
+}
+
 func addNote(data MessageAddNote) error {
 	result, err := database.Exec("INSERT INTO `notes` (`text`, `list_id`) VALUES(?, ?)", data.Text, data.ListId)
 	if err != nil {
@@ -169,7 +243,7 @@ func addNote(data MessageAddNote) error {
 	data.Id = int(lastInsertId)
 
 	broadcastMessage(Message{
-		Command: "ADD_NOTE",
+		Command: CommandAddNote,
 		Data: data,
 	})
 
@@ -222,7 +296,7 @@ func deleteList(data MessageDeleteList) error {
 	}
 
 	broadcastMessage(Message{
-		Command: "DELETE_LIST",
+		Command: CommandDeleteList,
 		Data: data,
 	})
 
@@ -245,7 +319,7 @@ func deleteNote(data MessageDeleteNote) error {
 	}
 
 	broadcastMessage(Message{
-		Command: "DELETE_NOTE",
+		Command: CommandDeleteNote,
 		Data: data,
 	})
 
@@ -322,7 +396,7 @@ func editNote(data MessageEditNote) error {
 	}
 
 	broadcastMessage(Message{
-		Command: "EDIT_NOTE",
+		Command: CommandEditNote,
 		Data: data,
 	})
 
@@ -345,7 +419,7 @@ func editBoard(data MessageEditBoard) error {
 	}
 
 	broadcastMessage(Message{
-		Command: "EDIT_BOARD",
+		Command: CommandEditBoard,
 		Data: data,
 	})
 
@@ -368,14 +442,14 @@ func editList(data MessageEditList) error {
 	}
 
 	broadcastMessage(Message{
-		Command: "EDIT_LIST",
+		Command: CommandEditList,
 		Data: data,
 	})
 
 	return nil
 }
 
-func sendBoards(connection *websocket.Conn) error {
+func sendBoardList() error {
 	rows, err := database.Query("SELECT `id`, `title` FROM boards")
 	if err != nil {
 		return err
@@ -390,8 +464,6 @@ func sendBoards(connection *websocket.Conn) error {
 			return err
 		}
 
-		board.Lists, err = getBoardLists(board.ID)
-
 		boards = append(boards, board)
 	}
 
@@ -400,9 +472,48 @@ func sendBoards(connection *websocket.Conn) error {
 		return err
 	}
 
-	return sendMessage(connection, Message{
-		Command: CommandBoards,
+	broadcastMessage(Message{
+		Command: CommandBoardList,
 		Data: boards,
+	})
+
+	return nil
+}
+
+func sendBoard(connection *websocket.Conn, data MessageGetBoard) error {
+	rows, err := database.Query("SELECT `id`, `title` FROM boards WHERE `id` = ?", data.Id)
+	if err != nil {
+		return err
+	}
+
+	board := Board{}
+
+	for rows.Next() {
+		err := rows.Scan(&board.ID, &board.Title)
+		if err != nil {
+			return err
+		}
+
+		lists, err := getBoardLists(board.ID)
+		if err != nil {
+			return err
+		}
+
+		board.Lists = lists
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return err
+	}
+
+	if board.ID == 0 {
+		return nil
+	}
+
+	return sendMessage(connection, Message{
+		Command: CommandBoard,
+		Data: board,
 	})
 }
 

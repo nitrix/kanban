@@ -11,7 +11,6 @@ window.addEventListener("error", function (e) {
 })
 
 function Board(title) {
-    this.id = +new Date();
     this.title = title;
     this.lists = [];
 }
@@ -55,9 +54,6 @@ function updatePageTitle() {
 function showBoard(quick) {
     const board = document.board;
 
-    // Keep track of the last seen board.
-    localStorage.setItem('board_id', board.id);
-
     const $wrap = $('.wrap');
     const $bdiv = $('tt .board');
     const $ldiv = $('tt .list');
@@ -67,7 +63,13 @@ function showBoard(quick) {
     const $b_lists = $b.find('.lists');
 
     $b[0].board_id = board.id;
-    $b.attr('board-id', board.id);
+
+    if (board.id) {
+        $b.attr('board-id', board.id);
+    } else {
+        $b.removeAttr('board-id');
+    }
+
     setText($b.find('.head .text'), board.title);
 
     board.lists.forEach(function (list) {
@@ -183,11 +185,19 @@ function stopEditing($edit, via_escape) {
             }));
         }
 
-        if ($item.parent('.board').attr('board-id')) {
+        if ($item.parent('.board').attr('board-id') && !brand_new) {
             ws.send(JSON.stringify({
                 'command': 'EDIT_BOARD',
                 'data': {
                     id: parseInt($item.parent('.board').attr('board-id')),
+                    title: text_now,
+                },
+            }));
+        }
+        else if ($item.parent('.board') && $item.parent('.board:not([board-id])').length > 0 && brand_new) {
+            ws.send(JSON.stringify({
+                'command': 'ADD_BOARD',
+                'data': {
                     title: text_now,
                 },
             }));
@@ -296,6 +306,10 @@ function openBoard(board_id) {
 
     document.board = document.boards[board_id];
 
+    // Keep track of the last opened board.
+    $('.board').first().attr('board-id', board_id);
+    localStorage.setItem('board_id', board_id);
+
     showBoard(true);
 }
 
@@ -327,10 +341,12 @@ function addBoard() {
 }
 
 function deleteBoard() {
-    const $list = $('.wrap .board .list');
-
-    if ($list.length && !confirm("PERMANENTLY delete this board, all its lists and their notes?"))
-        return;
+    ws.send(JSON.stringify({
+        command: 'DELETE_BOARD',
+        data: {
+            id: parseInt($('.board').attr('board-id')),
+        },
+    }));
 
     closeBoard();
 }
@@ -585,11 +601,12 @@ function updateBoardMenu() {
     const $index = $('.config .boards');
     const $entry = $('tt .load-board');
 
-    const id_now = document.board && document.board.id;
+    //const id_now = document.board && document.board.id;
 
-    const board_id = localStorage.getItem('board_id');
-    if (board_id === id_now)
-        $e.addClass('active');
+    //const board_id = localStorage.getItem('board_id');
+
+    //if (board_id === id_now)
+    //    $e.addClass('active');
 
     let empty = true;
 
@@ -598,7 +615,7 @@ function updateBoardMenu() {
 
     for (const key in document.boards) {
         const $e = $entry.clone();
-        $e[0].board_id = document.boards[key].id;
+        $e.attr('target-board-id', document.boards[key].id);
         $e.html(document.boards[key].title || '(unnamed board)');
 
         $index.append($e);
@@ -741,13 +758,21 @@ $('.config .add-board').live('click', function () {
 });
 
 $('.config .load-board').live('click', function () {
-    closeBoard();
-    openBoard($(this)[0].board_id);
+    ws.send(JSON.stringify({
+        command: 'GET_BOARD',
+        data: {
+            id: parseInt($(this).attr('target-board-id'))
+        },
+    }))
 
     return false;
 });
 
 $('.board .del-board').live('click', function () {
+    const $list = $('.wrap .board .list');
+    if ($list.length && !confirm("PERMANENTLY delete this board, all its lists and their notes?"))
+        return;
+
     deleteBoard();
     return false;
 });
@@ -960,9 +985,20 @@ setInterval(adjustListScroller, 100);
 let ws = new WebSocket("ws://localhost/live");
 
 ws.onopen = function() {
+    const board_id = localStorage.getItem('board_id');
+
     ws.send(JSON.stringify({
-        command: "GET_BOARDS"
+        command: "GET_BOARD_LIST"
     }));
+
+    if (board_id > 0) {
+        ws.send(JSON.stringify({
+            command: 'GET_BOARD',
+            data: {
+                id: parseInt(board_id),
+            },
+        }));
+    }
 }
 
 ws.onclose = function() {
@@ -972,24 +1008,34 @@ ws.onclose = function() {
 
 ws.onmessage = function(evt) {
     const obj = JSON.parse(evt.data);
-    let board_id = localStorage.getItem('board_id');
 
-    if (obj.command === "BOARDS") {
+    if (obj.command === "BOARD_LIST") {
+        document.boards = {};
         for (let i = 0; i < obj.data.length; i++) {
             const board = obj.data[i];
-            document.boards[board.id] = board;
+            document.boards[board.id] = {
+                id: board.id,
+                title: board.title,
+            };
         }
 
         updateBoardMenu();
+    }
 
-        if (board_id === null && document.boards.length > 0) {
-            board_id = document.boards[Object.keys(document.boards)[0]].id;
-            localStorage.setItem('board_id', board_id);
+    if (obj.command === "BOARD") {
+        if (typeof obj.data.lists === "undefined") {
+            obj.data.lists = [];
         }
 
-        if (board_id && typeof document.boards[board_id] !== "undefined") {
-            document.board = document.boards[board_id];
-            showBoard(true);
+        document.boards[obj.data.id] = obj.data;
+
+        openBoard(obj.data.id);
+    }
+
+    if (obj.command === 'DELETE_BOARD') {
+        const $board = $('[board-id=' + obj.data.id + ']');
+        if ($board) {
+            closeBoard();
         }
     }
 
@@ -1098,6 +1144,14 @@ ws.onmessage = function(evt) {
         else {
             location.reload();
         }
+    }
+
+    if (obj.command === "ADD_BOARD") {
+        const $board = $('.board:not([board-id])');
+        if ($board.length === 1) {
+            $board.attr('board-id', obj.data.id);
+        }
+        localStorage.setItem('board_id', obj.data.id);
     }
 }
 

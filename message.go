@@ -2,8 +2,10 @@ package main
 
 type Command string
 const (
-	CommandGetBoards Command = "GET_BOARDS"
-	CommandBoards Command = "BOARDS"
+	CommandGetBoardList Command = "GET_BOARD_LIST"
+	CommandGetBoard Command = "GET_BOARD"
+	CommandBoard Command = "BOARD"
+	CommandBoardList Command = "BOARD_LIST"
 	CommandAddNote Command = "ADD_NOTE"
 	CommandDeleteNote Command = "DELETE_NOTE"
 	CommandEditNote Command = "EDIT_NOTE"
@@ -11,11 +13,26 @@ const (
 	CommandEditBoard Command = "EDIT_BOARD"
 	CommandAddList Command = "ADD_LIST"
 	CommandDeleteList Command = "DELETE_LIST"
+	CommandAddBoard Command = "ADD_BOARD"
+	CommandDeleteBoard Command = "DELETE_BOARD"
 )
 
 type Message struct {
 	Command Command `json:"command"`
 	Data interface{} `json:"data"`
+}
+
+type MessageGetBoard struct {
+	Id int `json:"id"`
+}
+
+type MessageDeleteBoard struct {
+	Id int `json:"id"`
+}
+
+type MessageAddBoard struct {
+	Id int `json:"id,omitempty"`
+	Title string `json:"title"`
 }
 
 type MessageAddList struct {
