@@ -550,6 +550,19 @@ function Drag() {
             }
         }
 
+        const note_id = $(this.item).closest('.note').attr('note-id');
+        const list_id = $(this.item).closest('.list').attr('list-id');
+
+        console.log(note_id, list_id);
+
+        ws.send(JSON.stringify({
+            command: 'EDIT_NOTE',
+            data: {
+                id: parseInt(note_id),
+                list_id: parseInt(list_id),
+            },
+        }))
+
         this.item = null;
     }
 }
@@ -966,6 +979,10 @@ ws.onmessage = function(evt) {
             } else {
                 $note.removeClass('collapsed');
             }
+        }
+
+        if (typeof obj.data.list_id !== "undefined") {
+            $note.appendTo($('[list-id=' + obj.data.list_id + '] > .notes'));
         }
     }
 

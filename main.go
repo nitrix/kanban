@@ -136,6 +136,23 @@ func editNote(data MessageEditNote) error {
 		}
 	}
 
+	// List id
+	if data.ListId > 0 {
+		result, err := database.Exec("UPDATE `notes` SET `list_id` = ? WHERE `id` = ?", data.ListId, data.Id)
+		if err != nil {
+			return err
+		}
+
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+
+		if affected != 1 {
+			return errors.New("note not found")
+		}
+	}
+
 	// Minimized
 	if data.Minimized != nil {
 		result, err := database.Exec("UPDATE `notes` SET `minimized` = ? WHERE `id` = ?", *data.Minimized, data.Id)
@@ -322,7 +339,6 @@ func sendMessage(connection *websocket.Conn, message Message) error {
 	return nil
 }
 
-// FIXME: Should broadcast to everyone but you, in case of large latency and fast edits.
 func broadcastMessage(message Message) {
 	connectionsMutex.Lock()
 	defer connectionsMutex.Unlock()
