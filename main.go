@@ -96,6 +96,20 @@ func processMessage(connection *websocket.Conn, data []byte) error {
 			return err
 		}
 		return editNote(tmp.Data)
+	case CommandEditBoard:
+		tmp := struct { Data MessageEditBoard }{}
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		return editBoard(tmp.Data)
+	case CommandEditList:
+		tmp := struct { Data MessageEditList }{}
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		return editList(tmp.Data)
 	default:
 		return sendMessage(connection, Message{
 			Command: "Error",
@@ -123,6 +137,56 @@ func editNote(data MessageEditNote) error {
 
 	broadcastMessage(Message{
 		Command: "EDIT_NOTE",
+		Data: data,
+	})
+
+	return nil
+}
+
+func editBoard(data MessageEditBoard) error {
+	fmt.Println(data.Id, data.Title)
+
+	result, err := database.Exec("UPDATE `boards` SET `title` = ? WHERE `id` = ?", data.Title, data.Id)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected != 1 {
+		return errors.New("board not found")
+	}
+
+	broadcastMessage(Message{
+		Command: "EDIT_BOARD",
+		Data: data,
+	})
+
+	return nil
+}
+
+func editList(data MessageEditList) error {
+	fmt.Println(data.Id, data.Title)
+
+	result, err := database.Exec("UPDATE `lists` SET `title` = ? WHERE `id` = ?", data.Title, data.Id)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected != 1 {
+		return errors.New("list not found")
+	}
+
+	broadcastMessage(Message{
+		Command: "EDIT_LIST",
 		Data: data,
 	})
 
@@ -223,6 +287,7 @@ func sendMessage(connection *websocket.Conn, message Message) error {
 	return nil
 }
 
+// FIXME: Should broadcast to everyone but you, in case of large latency and fast edits.
 func broadcastMessage(message Message) {
 	connectionsMutex.Lock()
 	defer connectionsMutex.Unlock()

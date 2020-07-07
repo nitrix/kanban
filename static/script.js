@@ -39,6 +39,8 @@ function setText($note, text) {
     });
 
     $note.html(text);
+
+    updatePageTitle();
 }
 
 function getText($note) {
@@ -73,6 +75,7 @@ function showBoard(quick) {
     const $b_lists = $b.find('.lists');
 
     $b[0].board_id = board.id;
+    $b.attr('board-id', board.id);
     setText($b.find('.head .text'), board.title);
 
     board.lists.forEach(function (list) {
@@ -138,16 +141,6 @@ function stopEditing($edit, via_escape) {
     const brand_new = $item.hasClass('brand-new');
     $item.removeClass('brand-new');
 
-    if ($item.attr('note-id')) {
-        ws.send(JSON.stringify({
-            'command': 'EDIT_NOTE',
-            'data': {
-                Id: parseInt($item.attr('note-id')),
-                Text: text_now,
-            },
-        }));
-    }
-
     if (brand_new && text_now === "") {
         $item.closest('.note, .list, .board').remove();
         return;
@@ -160,7 +153,36 @@ function stopEditing($edit, via_escape) {
         }
     } else if (text_now !== text_was || brand_new) {
         setText($text, text_now);
-        updatePageTitle();
+
+        if ($item.attr('note-id')) {
+            ws.send(JSON.stringify({
+                'command': 'EDIT_NOTE',
+                'data': {
+                    id: parseInt($item.attr('note-id')),
+                    text: text_now,
+                },
+            }));
+        }
+
+        if ($item.parent('.list').attr('list-id')) {
+            ws.send(JSON.stringify({
+                'command': 'EDIT_LIST',
+                'data': {
+                    id: parseInt($item.parent('.list').attr('list-id')),
+                    title: text_now,
+                },
+            }));
+        }
+
+        if ($item.parent('.board').attr('board-id')) {
+            ws.send(JSON.stringify({
+                'command': 'EDIT_BOARD',
+                'data': {
+                    id: parseInt($item.parent('.board').attr('board-id')),
+                    title: text_now,
+                },
+            }));
+        }
     }
 
     if (brand_new && $item.hasClass('list'))
@@ -909,8 +931,20 @@ ws.onmessage = function(evt) {
     }
 
     if (obj.command === "EDIT_NOTE") {
-        const $text = $('[note-id=' + obj.data.id + ']').find('.text');;
+        const $text = $('[note-id=' + obj.data.id + ']').find('.text');
         setText($text, obj.data.text);
+    }
+
+    if (obj.command === "EDIT_LIST") {
+        const $text = $('[list-id=' + obj.data.id + ']').find('.head .text');
+        setText($text, obj.data.title);
+    }
+
+    if (obj.command === "EDIT_BOARD") {
+        const $text = $('[board-id=' + obj.data.id + ']').find('.head .text').first();
+        document.boards[obj.data.id].title = obj.data.title;
+        setText($text, obj.data.title);
+        updateBoardMenu();
     }
 }
 
