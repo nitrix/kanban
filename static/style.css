@@ -40,7 +40,6 @@ body.dragging {
 
 a {
     text-decoration: none;
-    transition: color 200ms;
 }
 
 a, a:active, a:focus, textarea, input {
@@ -152,7 +151,6 @@ body.crowded .board {
 .board .menu a,
 .board .ops  a {
     color: #000000A0;
-    transition: color 200ms;
 }
 
 .board .menu a {
@@ -325,7 +323,6 @@ body.crowded .board {
 .board .note .text a {
     color: inherit;
     cursor: default;
-    transition: none;
 }
 
 @keyframes whoomp {
@@ -337,7 +334,6 @@ body.crowded .board {
 .board .head .text a:hover,
 .board .note .text a:hover {
     animation-name: whoomp;
-    animation-duration: 700ms;
 }
 
 .reveal .board .head .text a,
@@ -377,7 +373,6 @@ body.crowded .board {
     top: 0;
     right: 0;
     opacity: 0;
-    transition: opacity 400ms;
     cursor: default;
     font-size: 9px;
 }
@@ -514,7 +509,6 @@ body.crowded .config:hover {
 .config a {
     display: block;
     color: #000;
-    transition: color 200ms;
 }
 
 .config a:hover {
@@ -529,7 +523,6 @@ body.crowded .config:hover {
 .config .bulk {
     margin-right: 20px;
     padding: 5px 0 10px 22px;
-    transition: opacity 400ms;
 }
 
 .config .bulk div {

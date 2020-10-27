@@ -124,6 +124,10 @@ func live(w http.ResponseWriter, r *http.Request) {
 func processMessage(connection *websocket.Conn, data []byte) error {
 	message := Message{}
 
+	if len(data) == 0 {
+		return nil
+	}
+
 	err := json.Unmarshal(data, &message)
 	if err != nil {
 		return err

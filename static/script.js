@@ -535,17 +535,17 @@ function Drag() {
 
         drag.in_swap = true;
 
-        $have.animate({height: 0}, 'fast', function () {
+        //$have.animate({height: 0}, 'fast', function () {
             $have.remove();
             $want.css({marginTop: 5});
-        });
+        //});
 
-        $want.css({display: 'block', height: 0, marginTop: 0});
-        $want.animate({height: h}, 'fast', function () {
+        $want.css({display: 'block', height: 0});
+        //$want.animate({height: h}, 'fast', function () {
             $want.css({opacity: '', height: ''});
             drag.in_swap = false;
             drag.adjustDrag();
-        });
+        //});
     }
 
     this.onMouseMove = function (ev) {
@@ -1004,6 +1004,15 @@ setInterval(adjustListScroller, 100);
 
 let ws = new WebSocket((document.location.protocol === 'https:' ? "wss://" : "ws://" ) + window.location.hostname + "/live");
 
+// Keep-alive mechanism.
+function keepAlive() {
+    if (ws.readyState === ws.OPEN) {
+        ws.send('');
+    }
+
+    setTimeout(keepAlive, 10000);
+}
+
 ws.onopen = function() {
     const board_id = localStorage.getItem('board_id');
 
@@ -1019,6 +1028,8 @@ ws.onopen = function() {
             },
         }));
     }
+
+    keepAlive();
 }
 
 ws.onclose = function() {
