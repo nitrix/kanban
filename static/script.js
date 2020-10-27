@@ -48,7 +48,12 @@ function updatePageTitle() {
     const title = getText($text);
 
     document.board.title = title;
-    document.title = 'Kanban - ' + (title || '(unnamed board)');
+
+    if (title !== '') {
+        document.title = 'Kanban - ' + (title || '(unnamed board)');
+    } else {
+        document.title = 'Kanban';
+    }
 }
 
 function showBoard(quick) {
@@ -143,6 +148,7 @@ function stopEditing($edit, via_escape) {
     if (via_escape) {
         if (brand_new) {
             $item.closest('.note, .list, .board').remove();
+            updatePageTitle();
             return;
         }
     } else if (text_now !== text_was || brand_new) {
@@ -329,6 +335,7 @@ function closeBoard(quick) {
     document.board = null;
 
     updateBoardMenu();
+    updatePageTitle();
 }
 
 function addBoard() {
@@ -618,7 +625,7 @@ function updateBoardMenu() {
     for (const key in document.boards) {
         const $e = $entry.clone();
         $e.attr('target-board-id', document.boards[key].id);
-        $e.html(document.boards[key].title || '(unnamed board)');
+        $e.html(document.boards[key].title || '');
 
         $index.append($e);
         empty = false;
