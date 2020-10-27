@@ -13,6 +13,12 @@ This is meant to be used only by me.
 
 It's probably a good idea to mount `/opt/data` where `/opt/data/kanban.db` will reside.
 
+## Feature flags
+
+| Name                | Description                           |
+|---------------------|---------------------------------------|
+| FEATURE_STAY_LOGGED | Stays logged in via a browser cookie. | 
+
 ## Disclaimer
 
 The code was put together in a hurry (less than a day) and is an absolute disaster.

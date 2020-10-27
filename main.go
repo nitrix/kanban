@@ -8,12 +8,15 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	_ "github.com/mattn/go-sqlite3"
+	tokenGenerator "github.com/sethvargo/go-password/password"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
+	"time"
 )
 
 var connections map[*websocket.Conn]bool
@@ -43,8 +46,8 @@ func main() {
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	http.HandleFunc("/", BasicAuth(indexPage, username, password, "Authentication required"))
-	http.HandleFunc("/live", BasicAuth(live, username, password, "Authentication required"))
+	http.HandleFunc("/", authenticationHandler(indexPage, username, password, "Authentication required"))
+	http.HandleFunc("/live", authenticationHandler(live, username, password, "Authentication required"))
 
 	err = http.ListenAndServe(":80", nil)
 	if err != nil {
@@ -735,9 +738,15 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func BasicAuth(handler http.HandlerFunc, username, password, realm string) http.HandlerFunc {
-
+func authenticationHandler(handler http.HandlerFunc, username, password, realm string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		trustCookie, err := r.Cookie("trust")
+		if err == nil {
+			if isTrusted(trustCookie.Value) {
+				handler(w, r)
+				return
+			}
+		}
 
 		user, pass, ok := r.BasicAuth()
 
@@ -748,6 +757,36 @@ func BasicAuth(handler http.HandlerFunc, username, password, realm string) http.
 			return
 		}
 
+		// Set trust cookie.
+		token, err := tokenGenerator.Generate(64, 10, 0, false, true)
+		if err == nil {
+			trust(token)
+			cookie := &http.Cookie{
+				Name:    "trust",
+				Value:   token,
+				Expires: time.Now().Add(30 * 24 * time.Hour),
+			}
+			http.SetCookie(w, cookie)
+		}
+
 		handler(w, r)
 	}
+}
+
+var trusted = make(map[string]struct{})
+
+func isTrusted(token string) bool {
+	_, ok := trusted[token]
+	return ok
+}
+
+func trust(token string) {
+	if truthy(os.Getenv("FEATURE_STAY_LOGGED")) {
+		trusted[token] = struct{}{}
+	}
+}
+
+func truthy(s string) bool {
+	s = strings.ToLower(s)
+	return s == "true" || s == "1" || s == "on" || s == "yes"
 }
