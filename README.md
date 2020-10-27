@@ -15,9 +15,9 @@ It's probably a good idea to mount `/opt/data` where `/opt/data/kanban.db` will 
 
 ## Feature flags
 
-| Name                | Description                           |
-|---------------------|---------------------------------------|
-| FEATURE_STAY_LOGGED | Stays logged in via a browser cookie. | 
+| Name                | Description                           | Default |
+|---------------------|---------------------------------------|---------|
+| FEATURE_STAY_LOGGED | Stays logged in via a browser cookie. | false   |
 
 ## Disclaimer
 
