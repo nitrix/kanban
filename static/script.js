@@ -167,6 +167,7 @@ function stopEditing($edit, via_escape) {
                 'command': 'ADD_NOTE',
                 'data': {
                     list_id: parseInt($item.closest('.list').attr('list-id')),
+                    uuid: $item.attr('note-uuid'),
                     text: text_now,
                 },
             }));
@@ -220,6 +221,7 @@ function addNote($list, $after, $before) {
 
     $note.find('.text').html('');
     $note.addClass('brand-new');
+    $note.attr('note-uuid', uuidv4());
 
     if ($before) {
         $before.before($note);
@@ -700,36 +702,24 @@ $('.board .edit').live('keydown', function (ev) {
         return false;
     }
 
-    // enter
+    // enters
+
     if (ev.keyCode === 13 && ev.ctrlKey) {
         const $this = $(this);
         const $note = $this.closest('.note');
         const $list = $note.closest('.list');
 
         stopEditing($this, false);
-
-        if ($note && ev.shiftKey) // ctrl-shift-enter
-            addNote($list, null, $note);
-        else if ($note && !ev.shiftKey) // ctrl-enter
-            addNote($list, $note);
+        addNote($list);
 
         return false;
     }
 
-    if (ev.keyCode === 13 && this.tagName === 'INPUT' ||
-        ev.keyCode === 13 && ev.altKey ||
-        ev.keyCode === 13 && ev.shiftKey) {
-        stopEditing($(this), false);
-        return false;
-    }
+    if (ev.keyCode === 13 && !ev.shiftKey) {
+        const $this = $(this);
 
-    if (ev.key === '*' && ev.ctrlKey) {
-        const have = this.value;
-        const pos = this.selectionStart;
-        const want = have.substr(0, pos) + '\u2022 ' + have.substr(this.selectionEnd);
+        stopEditing($this, false);
 
-        $(this).val(want);
-        this.selectionStart = this.selectionEnd = pos + 2;
         return false;
     }
 
@@ -1114,22 +1104,13 @@ ws.onmessage = function(evt) {
 
     if (obj.command === 'ADD_NOTE') {
         const $list = $('[list-id=' + obj.data.list_id + ']');
-        let $note = $list.find('.note:not([note-id])');
+        let $note = $('[note-uuid="' + obj.data.uuid + '"]');
 
-        // Handle remotely create note.
         if ($note.length === 0) {
-            $note = $('tt .note').clone();
-            $list.find('.notes').append($note);
+            $list.find('.notes').append($('tt .note').clone());
+            $note = $list.find('.note').last();
 
-            const $last = $list.find('.note').last();
-
-            setText($last.find('.text'), obj.data.text);
-        }
-        else if ($note.length === 1) {
-            $note.attr('note-id', obj.data.id);
-        }
-        else if ($note.length > 1) {
-            location.reload();
+            setText($note.find('.text'), obj.data.text);
         }
 
         $note.attr('note-id', obj.data.id);
@@ -1206,4 +1187,10 @@ ws.onmessage = function(evt) {
 ws.onerror = function(evt) {
     ws = null;
     location.reload();
+}
+
+function uuidv4() {
+    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    );
 }

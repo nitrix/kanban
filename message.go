@@ -54,6 +54,7 @@ type MessageDeleteList struct {
 
 type MessageAddNote struct {
 	Id int `json:"id,omitempty"`
+	Uuid string `json:"uuid"`
 	Text string `json:"text"`
 	ListId int `json:"list_id"`
 }

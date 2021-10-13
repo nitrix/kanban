@@ -98,7 +98,11 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func authenticationHandler(handler http.HandlerFunc, username, password, realm string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	if username == "" || password == "" {
+		return handler
+	}
+
+ 	return func(w http.ResponseWriter, r *http.Request) {
 		trustCookie, err := r.Cookie("trust")
 		if err == nil {
 			if isTrusted(trustCookie.Value) {
