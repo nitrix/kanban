@@ -6,7 +6,7 @@ WORKDIR /go/src
 COPY . .
 RUN CGO_ENABLED=1 GOOS=linux go build -a -ldflags '-linkmode external -extldflags "-static"' .
 
-FROM scratch
+FROM alpine
 COPY --from=builder /go/src/kanban /usr/bin/kanban
 COPY --from=builder /go/src/schema.sql /opt/schema.sql
 COPY --from=builder /go/src/index.html /opt/index.html
