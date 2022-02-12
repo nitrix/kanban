@@ -100,9 +100,9 @@ function showBoard(quick) {
         $wrap.html('').append($b);
     else
         $wrap.html('')
-            .css({opacity: 0})
+            .css({ opacity: 0 })
             .append($b)
-            .animate({opacity: 1});
+            .animate({ opacity: 1 });
 
     updatePageTitle();
     updateBoardMenu();
@@ -158,7 +158,7 @@ function stopEditing($edit, via_escape) {
             ws.send(JSON.stringify({
                 'command': 'EDIT_NOTE',
                 'data': {
-                    id: parseInt($item.attr('note-id')),
+                    id: $item.attr('note-id'),
                     text: text_now,
                 },
             }));
@@ -166,7 +166,7 @@ function stopEditing($edit, via_escape) {
             ws.send(JSON.stringify({
                 'command': 'ADD_NOTE',
                 'data': {
-                    list_id: parseInt($item.closest('.list').attr('list-id')),
+                    list_id: $item.closest('.list').attr('list-id'),
                     uuid: $item.attr('note-uuid'),
                     text: text_now,
                 },
@@ -177,7 +177,7 @@ function stopEditing($edit, via_escape) {
             ws.send(JSON.stringify({
                 'command': 'EDIT_LIST',
                 'data': {
-                    id: parseInt($item.parent('.list').attr('list-id')),
+                    id: $item.parent('.list').attr('list-id'),
                     title: text_now,
                 },
             }));
@@ -186,7 +186,7 @@ function stopEditing($edit, via_escape) {
             ws.send(JSON.stringify({
                 'command': 'ADD_LIST',
                 'data': {
-                    board_id: parseInt($('.board').attr('board-id')),
+                    board_id: $('.board').attr('board-id'),
                     title: text_now,
                 },
             }));
@@ -196,7 +196,7 @@ function stopEditing($edit, via_escape) {
             ws.send(JSON.stringify({
                 'command': 'EDIT_BOARD',
                 'data': {
-                    id: parseInt($item.parent('.board').attr('board-id')),
+                    id: $item.parent('.board').attr('board-id'),
                     title: text_now,
                 },
             }));
@@ -239,7 +239,7 @@ function addNote($list, $after, $before) {
 
 function deleteNote($note) {
     $note
-        .animate({opacity: 0}, 'fast')
+        .animate({ opacity: 0 }, 'fast')
         .slideUp('fast')
         .queue(function () {
             $note.remove();
@@ -271,7 +271,7 @@ function deleteList($list) {
     });
 
     $list
-        .animate({opacity: 0})
+        .animate({ opacity: 0 })
         .queue(function () {
             $list.remove();
         });
@@ -279,7 +279,7 @@ function deleteList($list) {
     setupListScrolling();
 }
 
-function moveList($list, left) {
+function moveList($list, left, done) {
     const $a = $list;
     const $b = left ? $a.prev() : $a.next();
 
@@ -289,23 +289,27 @@ function moveList($list, left) {
     const pos_a = $a.offset().left;
     const pos_b = $b.offset().left;
 
-    $a.css({position: 'relative'});
-    $b.css({position: 'relative'});
+    $a.css({ position: 'relative' });
+    $b.css({ position: 'relative' });
 
     $menu_a.hide();
     $menu_b.hide();
 
-    $a.animate({left: (pos_b - pos_a) + 'px'}, 'fast');
-    $b.animate({left: (pos_a - pos_b) + 'px'}, 'fast', function () {
+    $a.animate({ left: (pos_b - pos_a) + 'px' }, 'fast');
+    $b.animate({ left: (pos_a - pos_b) + 'px' }, 'fast', function () {
 
         if (left) $list.prev().before($list);
         else $list.before($list.next());
 
-        $a.css({position: '', left: ''});
-        $b.css({position: '', left: ''});
+        $a.css({ position: '', left: '' });
+        $b.css({ position: '', left: '' });
 
-        $menu_a.css({display: ''});
-        $menu_b.css({display: ''});
+        $menu_a.css({ display: '' });
+        $menu_b.css({ display: '' });
+
+        if (typeof done !== 'undefined') {
+            done();
+        }
     });
 }
 
@@ -328,7 +332,7 @@ function closeBoard(quick) {
         $board.remove();
     else {
         $board
-            .animate({opacity: 0}, 100)
+            .animate({ opacity: 0 }, 100)
             .queue(function () {
                 $board.remove();
             });
@@ -353,7 +357,7 @@ function deleteBoard() {
     ws.send(JSON.stringify({
         command: 'DELETE_BOARD',
         data: {
-            id: parseInt($('.board').attr('board-id')),
+            id: $('.board').attr('board-id'),
         },
     }));
 
@@ -363,10 +367,10 @@ function deleteBoard() {
 function Drag() {
     this.item = null; // .text of .note
     this.priming = null;
-    this.primexy = {x: 0, y: 0};
+    this.primexy = { x: 0, y: 0 };
     this.$drag = null;
     this.mouse = null;
-    this.delta = {x: 0, y: 0};
+    this.delta = { x: 0, y: 0 };
     this.in_swap = false;
 
     this.prime = function (item, ev) {
@@ -426,7 +430,7 @@ function Drag() {
         this.delta.y = pos.top - this.mouse.clientY - scroll_y;
         this.adjustDrag();
 
-        $drag.css({opacity: 1});
+        $drag.css({ opacity: 1 });
 
         $body.addClass('dragging');
     }
@@ -442,7 +446,7 @@ function Drag() {
         const drag_x = this.mouse.clientX + this.delta.x + scroll_x;
         const drag_y = this.mouse.clientY + this.delta.y + scroll_y;
 
-        this.$drag.offset({left: drag_x, top: drag_y});
+        this.$drag.offset({ left: drag_x, top: drag_y });
 
         if (this.in_swap)
             return;
@@ -518,7 +522,7 @@ function Drag() {
         const $have = $(this.item.parentNode);
         let $want = $have.clone();
 
-        $want.css({display: 'none'});
+        $want.css({ display: 'none' });
 
         if (target) {
             const $target = $(target);
@@ -545,15 +549,15 @@ function Drag() {
         drag.in_swap = true;
 
         //$have.animate({height: 0}, 'fast', function () {
-            $have.remove();
-            $want.css({marginTop: 5});
+        $have.remove();
+        $want.css({ marginTop: 5 });
         //});
 
-        $want.css({display: 'block', height: 0});
+        $want.css({ display: 'block', height: 0 });
         //$want.animate({height: h}, 'fast', function () {
-            $want.css({opacity: '', height: ''});
-            drag.in_swap = false;
-            drag.adjustDrag();
+        $want.css({ opacity: '', height: '' });
+        drag.in_swap = false;
+        drag.adjustDrag();
         //});
     }
 
@@ -591,15 +595,15 @@ function Drag() {
 
         const note_id = $(this.item).closest('.note').attr('note-id');
         const list_id = $(this.item).closest('.list').attr('list-id');
-        const previous_note_id = $(this.item).closest('.note').prev().attr('note-id') || 0;
+        const previous_note_id = $(this.item).closest('.note').prev().attr('note-id') || '0';
 
         if (note_id) {
             ws.send(JSON.stringify({
                 command: 'EDIT_NOTE',
                 data: {
-                    id: parseInt(note_id),
-                    list_id: parseInt(list_id),
-                    previous_note_id: parseInt(previous_note_id),
+                    id: note_id,
+                    list_id: list_id,
+                    previous_note_id: previous_note_id,
                 },
             }));
         }
@@ -760,7 +764,7 @@ $('.config .load-board').live('click', function () {
     ws.send(JSON.stringify({
         command: 'GET_BOARD',
         data: {
-            id: parseInt($(this).attr('target-board-id'))
+            id: $(this).attr('target-board-id'),
         },
     }))
 
@@ -769,9 +773,6 @@ $('.config .load-board').live('click', function () {
 
 $('.board .del-board').live('click', function () {
     const $list = $('.wrap .board .list');
-    if ($list.length && !confirm("PERMANENTLY delete this board, all its lists and their notes?"))
-        return;
-
     deleteBoard();
     return false;
 });
@@ -784,13 +785,10 @@ $('.board .add-list').live('click', function () {
 $('.board .del-list').live('click', function () {
     const $list = $(this).closest('.list');
 
-    if (!confirm("Delete this list and all its notes?"))
-        return;
-
     ws.send(JSON.stringify({
         'command': 'DELETE_LIST',
         'data': {
-            id: parseInt($list.attr('list-id')),
+            id: $list.attr('list-id'),
         },
     }));
 
@@ -800,30 +798,50 @@ $('.board .del-list').live('click', function () {
 });
 
 $('.board .mov-list-l').live('click', function () {
-    ws.send(JSON.stringify({
-        command: "MOVE_LIST",
-        data: {
-            id: parseInt($(this).closest('.list').attr('list-id')),
-            board_id: parseInt($(this).closest('.board').attr('board-id')),
-            direction: "LEFT",
-        },
-    }))
+    var $el = $(this);
 
-    moveList($(this).closest('.list'), true);
+    moveList($el.closest('.list'), true, function () {
+        var list_ids = [];
+
+        $el.closest('.board').find('.list').each(function () {
+            list_ids.push($(this).attr('list-id'));
+        });
+
+        ws.send(JSON.stringify({
+            command: "MOVE_LIST",
+            data: {
+                id: $el.closest('.list').attr('list-id'),
+                board_id: $el.closest('.board').attr('board-id'),
+                list_ids: list_ids,
+                direction: "LEFT",
+            },
+        }))
+    });
+
     return false;
 });
 
 $('.board .mov-list-r').live('click', function () {
-    ws.send(JSON.stringify({
-        command: "MOVE_LIST",
-        data: {
-            id: parseInt($(this).closest('.list').attr('list-id')),
-            board_id: parseInt($(this).closest('.board').attr('board-id')),
-            direction: "RIGHT",
-        },
-    }))
+    var $el = $(this);
 
-    moveList($(this).closest('.list'), false);
+    moveList($el.closest('.list'), false, function () {
+        var list_ids = [];
+
+        $el.closest('.board').find('.list').each(function () {
+            list_ids.push($(this).attr('list-id'));
+        });
+
+        ws.send(JSON.stringify({
+            command: "MOVE_LIST",
+            data: {
+                id: $el.closest('.list').attr('list-id'),
+                board_id: $el.closest('.board').attr('board-id'),
+                list_ids: list_ids,
+                direction: "RIGHT",
+            },
+        }))
+    });
+
     return false;
 });
 
@@ -838,7 +856,7 @@ $('.board .del-note').live('click', function () {
     ws.send(JSON.stringify({
         command: 'DELETE_NOTE',
         data: {
-            id: parseInt($note.attr('note-id')),
+            id: $note.attr('note-id'),
         },
     }))
 
@@ -855,7 +873,7 @@ $('.board .raw-note').live('click', function () {
     ws.send(JSON.stringify({
         command: 'EDIT_NOTE',
         data: {
-            id: parseInt($note.attr('note-id')),
+            id: $note.attr('note-id'),
             raw: $note.hasClass('raw'),
         },
     }))
@@ -871,7 +889,7 @@ $('.board .collapse').live('click', function () {
     ws.send(JSON.stringify({
         command: 'EDIT_NOTE',
         data: {
-            id: parseInt($note.attr('note-id')),
+            id: $note.attr('note-id'),
             minimized: $note.hasClass('collapsed'),
         },
     }))
@@ -999,7 +1017,7 @@ if (localStorage.getItem('nullboard.fsize') === 'z1')
 
 setInterval(adjustListScroller, 100);
 
-let ws = new WebSocket((document.location.protocol === 'https:' ? "wss://" : "ws://" ) + window.location.hostname + "/live");
+let ws = new WebSocket((document.location.protocol === 'https:' ? "wss://" : "ws://") + window.location.hostname + "/live");
 
 // Keep-alive mechanism.
 function keepAlive() {
@@ -1010,31 +1028,20 @@ function keepAlive() {
     setTimeout(keepAlive, 10000);
 }
 
-ws.onopen = function() {
-    const board_id = localStorage.getItem('board_id');
-
+ws.onopen = function () {
     ws.send(JSON.stringify({
         command: "GET_BOARD_LIST"
     }));
 
-    if (board_id > 0) {
-        ws.send(JSON.stringify({
-            command: 'GET_BOARD',
-            data: {
-                id: parseInt(board_id),
-            },
-        }));
-    }
-
     keepAlive();
 }
 
-ws.onclose = function() {
+ws.onclose = function () {
     ws = null;
     location.reload();
 }
 
-ws.onmessage = function(evt) {
+ws.onmessage = function (evt) {
     const obj = JSON.parse(evt.data);
 
     if (obj.command === "BOARD_LIST") {
@@ -1048,6 +1055,25 @@ ws.onmessage = function(evt) {
         }
 
         updateBoardMenu();
+
+        const board_id = localStorage.getItem('board_id');
+        if (board_id > 0 && typeof document.boards[board_id] !== 'undefined') {
+            console.log("Scenario 1");
+            ws.send(JSON.stringify({
+                command: 'GET_BOARD',
+                data: {
+                    id: board_id,
+                },
+            }));
+        } else if (Object.keys(document.boards).length > 0) {
+            console.log("Scenario 2");
+            ws.send(JSON.stringify({
+                command: 'GET_BOARD',
+                data: {
+                    id: Object.keys(document.boards)[0],
+                },
+            }));
+        }
     }
 
     if (obj.command === "BOARD") {
@@ -1095,9 +1121,9 @@ ws.onmessage = function(evt) {
             $note.appendTo($('[list-id=' + obj.data.list_id + '] > .notes'));
         }
 
-        if (typeof obj.data.previous_note_id !== "undefined" && obj.data.previous_note_id > 0) {
+        if (typeof obj.data.previous_note_id !== "undefined" && obj.data.previous_note_id != '' && obj.data.previous_note_id != '0') {
             $note.insertAfter($('[note-id=' + obj.data.previous_note_id + ']'));
-        } else if (typeof obj.data.previous_note_id !== "undefined" && obj.data.previous_note_id === 0) {
+        } else if (typeof obj.data.previous_note_id !== "undefined") {
             $('[list-id=' + obj.data.list_id + ']').find('.notes').prepend($note);
         }
     }
@@ -1184,13 +1210,13 @@ ws.onmessage = function(evt) {
     }
 }
 
-ws.onerror = function(evt) {
+ws.onerror = function (evt) {
     ws = null;
     location.reload();
 }
 
 function uuidv4() {
-    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
         (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
     );
 }

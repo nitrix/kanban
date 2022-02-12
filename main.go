@@ -3,24 +3,29 @@ package main
 import (
 	"crypto/subtle"
 	"database/sql"
-	"github.com/gorilla/websocket"
-	tokenGenerator "github.com/sethvargo/go-password/password"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
+	tokenGenerator "github.com/sethvargo/go-password/password"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 var connections map[*websocket.Conn]bool
 var connectionsMutex sync.Mutex
 var database *sql.DB
+var db *gorm.DB
 
 func main() {
 	var err error
 
-	connections = make(map[*websocket.Conn]bool, 0)
+	connections = make(map[*websocket.Conn]bool)
 
 	_ = os.Mkdir("data", 0700)
 
@@ -31,7 +36,22 @@ func main() {
 
 	database, err = sql.Open("sqlite3", "data/kanban.db?_foreign_keys=on")
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("Unable to open Sqlite3 database:", err)
+	}
+
+	// db, err = gorm.Open(sqlite.Open("data/kanban.db?_foreign_keys=on"), nil)
+	// if err != nil {
+	// 	log.Fatalln("Unable to connect to Sqlite database:", err)
+	// }
+
+	db, err = gorm.Open(postgres.Open("postgresql://kanban@localhost:26257/kanban?sslmode=disable"), nil)
+	if err != nil {
+		log.Fatalln("Unable to connect to Postgres database:", err)
+	}
+
+	err = db.AutoMigrate(&Board{}, &List{}, &Note{})
+	if err != nil {
+		log.Fatalln("Unable to migrate database:", err)
 	}
 
 	username := os.Getenv("USERNAME")
@@ -73,7 +93,7 @@ func live(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, data, err := c.ReadMessage()
 		if err != nil {
-			log.Println("Unable to read from websocket:", err)
+			// log.Println("Unable to read from websocket:", err)
 			return
 		}
 
@@ -102,7 +122,7 @@ func authenticationHandler(handler http.HandlerFunc, username, password, realm s
 		return handler
 	}
 
- 	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		trustCookie, err := r.Cookie("trust")
 		if err == nil {
 			if isTrusted(trustCookie.Value) {

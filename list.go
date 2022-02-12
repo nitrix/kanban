@@ -1,7 +1,9 @@
 package main
 
 type List struct {
-	ID int `json:"id"`
-	Title string `json:"title"`
-	Notes []Note `json:"notes"`
+	ID      uint64 `json:"id,string"`
+	BoardID uint64 `json:"board_id,string"`
+	Title   string `json:"title"`
+	Order   uint   `json:"order"`
+	Notes   []Note `json:"notes"`
 }
