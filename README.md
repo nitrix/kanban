@@ -11,13 +11,29 @@ This is meant to be used only by me.
 1. One option online at the https://kanban.nitrix.me
 2. Another option is locally using `docker run -p 80 -e USERNAME=test -e PASSWORD=test nitrix/kanban`.
 
-It's probably a good idea to mount `/opt/data` where `/opt/data/kanban.db` will reside.
-
 ## Feature flags
 
 | Name                | Description                           | Default |
 |---------------------|---------------------------------------|---------|
 | FEATURE_STAY_LOGGED | Stays logged in via a browser cookie. | false   |
+
+## Persistent storage
+
+By default, SQLite is used for local storage, meaning it's probably a good idea to mount a volume at `/opt/data` for
+where `/opt/data/kanban.db` will reside to not loose your data.
+
+Alternatively, you can use an external Postgres database by mounting SSL certificates at `/opt/certs` and playing with the environment variables:
+
+| Name               | Default          | Example          |
+|--------------------|------------------|------------------|
+| POSTGRES_ENABLED   | false            | true             |
+| POSTGRES_HOSTNAME  | localhost        | cockroachdb      |
+| POSTGRES_DATABASE  | kanban           | nitrix           |
+| POSTGRES_USERNAME  | kanban           | nitrix           |
+| POSTGRES_PORT      | 5432             | 26257            |
+| POSTGRES_CA_PATH   | certs/ca.crt     | certs/ca.crt     |
+| POSTGRES_KEY_PATH  | certs/kanban.key | certs/nitrix.key |
+| POSTGRES_CERT_PATH | certs/kanban.crt | certs/nitrix.crt |
 
 ## Disclaimer
 

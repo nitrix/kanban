@@ -2,7 +2,7 @@ package main
 
 import (
 	"crypto/subtle"
-	"database/sql"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,12 +14,12 @@ import (
 	tokenGenerator "github.com/sethvargo/go-password/password"
 
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 var connections map[*websocket.Conn]bool
 var connectionsMutex sync.Mutex
-var database *sql.DB
 var db *gorm.DB
 
 func main() {
@@ -29,24 +29,58 @@ func main() {
 
 	_ = os.Mkdir("data", 0700)
 
-	err = createDatabaseFromSchemaIfNecessary()
-	if err != nil {
-		log.Fatalln(err)
+	postgresEnabled := os.Getenv("POSTGRES_ENABLED")
+	postgresHostname := os.Getenv("POSTGRES_HOSTNAME")
+	postgresDatabase := os.Getenv("POSTGRES_DATABASE")
+	postgresUsername := os.Getenv("POSTGRES_USERNAME")
+	postgresPort := os.Getenv("POSTGRES_PORT")
+	postgresCertPath := os.Getenv("POSTGRES_CERT_PATH")
+	postgresKeyPath := os.Getenv("POSTGRES_KEY_PATH")
+	postgresCaPath := os.Getenv("POSTGRES_CA_PATH")
+
+	if postgresHostname == "" {
+		postgresHostname = "localhost"
 	}
 
-	database, err = sql.Open("sqlite3", "data/kanban.db?_foreign_keys=on")
-	if err != nil {
-		log.Fatalln("Unable to open Sqlite3 database:", err)
+	if postgresPort == "" {
+		postgresPort = "5432"
 	}
 
-	// db, err = gorm.Open(sqlite.Open("data/kanban.db?_foreign_keys=on"), nil)
-	// if err != nil {
-	// 	log.Fatalln("Unable to connect to Sqlite database:", err)
-	// }
+	if postgresDatabase == "" {
+		postgresDatabase = "kanban"
+	}
 
-	db, err = gorm.Open(postgres.Open("postgresql://kanban@localhost:26257/kanban?sslmode=disable"), nil)
-	if err != nil {
-		log.Fatalln("Unable to connect to Postgres database:", err)
+	if postgresUsername == "" {
+		postgresUsername = "kanban"
+	}
+
+	if postgresCertPath == "" {
+		postgresCertPath = "certs/kanban.crt"
+	}
+
+	if postgresKeyPath == "" {
+		postgresKeyPath = "certs/kanban.key"
+	}
+
+	if postgresCaPath == "" {
+		postgresCaPath = "certs/ca.crt"
+	}
+
+	if postgresEnabled == "true" {
+		connUrl := fmt.Sprintf("postgresql://%s@%s:%s/%s", postgresUsername, postgresHostname, postgresPort, postgresDatabase)
+		connUrl += fmt.Sprintf("?sslmode=verify-full&sslcert=%s&sslkey=%s&sslrootcert=%s", postgresCertPath, postgresKeyPath, postgresCaPath)
+
+		db, err = gorm.Open(postgres.Open(connUrl), nil)
+		if err != nil {
+			log.Fatalln("Unable to connect to Postgres database:", err)
+		}
+	} else {
+		db, err = gorm.Open(sqlite.Open("data/kanban.db"), &gorm.Config{
+			DisableForeignKeyConstraintWhenMigrating: true,
+		})
+		if err != nil {
+			log.Fatalln("Unable to connect to Sqlite database:", err)
+		}
 	}
 
 	err = db.AutoMigrate(&Board{}, &List{}, &Note{})
@@ -67,6 +101,15 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+
+	return !info.IsDir()
 }
 
 func live(w http.ResponseWriter, r *http.Request) {
