@@ -6,8 +6,7 @@ A real-time & persistent kanban board.
 
 ## Usage
 
-This is meant to be used by a single user only.  
-Run locally with `go run` or on Docker with `docker run -p 80 -e USERNAME=test -e PASSWORD=test ghcr.io/nitrix/kanban`.
+This is meant to be used by a single user only. Run locally with `go run` or on Docker with `docker run -p 80 -e USERNAME=test -e PASSWORD=test ghcr.io/nitrix/kanban`.
 
 ## Feature flags
 
