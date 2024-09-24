@@ -8,8 +8,7 @@ A real-time & persistent kanban board.
 
 This is meant to be used only by me.
 
-1. One option online at the https://kanban.nitrix.me
-2. Another option is locally using `docker run -p 80 -e USERNAME=test -e PASSWORD=test ghcr.io/nitrix/kanban`.
+Run locally with `go run` or on Docker with `docker run -p 80 -e USERNAME=test -e PASSWORD=test ghcr.io/nitrix/kanban`.
 
 ## Feature flags
 
